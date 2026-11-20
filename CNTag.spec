@@ -16,7 +16,7 @@ a = Analysis(
         *(
             (str(asset), f"assets/{asset.name}")
             for asset in (project / "assets").iterdir()
-            if sys.platform == "darwin" or asset.name not in {"icon.icns", "icon.svg"}
+            if sys.platform == "darwin" or asset.name != "icon.icns"
         ),
         (str(project / "LICENSE"), "."),
         (str(project / "THIRD_PARTY_NOTICES.md"), "."),

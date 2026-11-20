@@ -1,13 +1,17 @@
 # CNTag 项目说明
 
-CNTag 是 DiscTag 的姊妹应用，用于把现有中文音乐库中被音译（拼音）或英文填写的标签与文件名原位还原为中文。还原逻辑尚未实现，当前为应用骨架。
+CNTag 是 DiscTag 的姊妹应用，用于把现有中文音乐库中被音译（拼音）或英文填写的标签与文件名原位还原为中文。
 
 ## 测试
 - `python -m unittest discover -s tests -v`
 - `ruff check .`（规则见 `ruff.toml`，只检查真实错误）。
+- 每个测试文件开头 `import _isolate`：把 `CNTAG_CONFIG_DIR` 指向临时目录，避免测试写入真实的设置、撤销记录和缓存。测试不得访问网络。
+- `scripts/make_icon.py` 用 Pillow 生成 `assets/icon.png/.ico/.icns`。
 
 ## 代码结构
-- `cntag/app.py` 的 `CNTagApp` 只负责启动、线程调度（`_run_async` / `_post`，后台线程不得直接调用 Tk）、设置与退出；界面按职责拆成 `cntag/ui/` 下的 mixin：`layout`、`theme`、`updates`，共享常量与辅助函数在 `ui/common.py`。
+- 无界面逻辑：`textutil`（CJK / 拼音 / 简繁 / `name_match_score` / `artists_match`）、`tags`（读写标签与重命名，WAV 用 ID3 帧）、`library`（遍历与按专辑分组，含多碟合并）、`resolve`（名称解析与候选）、`matching`（文件对应曲目、生成行）、`scanner`（`scan_album` / `rows_for_candidate` / `scan_library`，含弱匹配降级为待确认）、`history`（应用与可重试撤销，每个文件写入后原子更新日志）、`models`。
+- 曲库客户端：`catalog_itunes`、`catalog_netease`、`encyclopedia`（MusicBrainz / Wikidata）+ `cache`（sqlite），共享 `http.http_session()`。
+- `cntag/app.py` 的 `CNTagApp` 只负责启动、线程调度（`_run_async` / `_post`，后台线程不得直接调用 Tk）、设置与退出；界面按职责拆成 `cntag/ui/` 下的 mixin：`layout`、`theme`、`options`、`library`、`candidates`、`compare`、`apply`、`keyboard`、`updates`，共享常量与辅助函数在 `ui/common.py`。
 - 非界面模块：`settings`（settings.json 路径与读取）、`updates`（GitHub Release 检查与安装包下载）、`i18n`、`windowing`（Windows 原生窗口样式）、`rounded_panel` / `rounded_style`（圆角控件样式）。
 - 界面文字一律以中文原文写成 `tr("中文 {0}", 值)`，英文译文在 `cntag/locales/en.py`。新增或修改文案时同步更新译文；`tests/test_i18n.py` 会检查缺失、多余和占位符不一致。不要在模块级（导入时）调用 `tr()`，需要本地化的常量写成函数。语言在 `main.py` 导入界面模块之前确定，切换后需重启。
 - 测试中 mock 界面模块时，patch 目标要指向实际使用该名称的模块。

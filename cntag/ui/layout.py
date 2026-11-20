@@ -34,43 +34,22 @@ class LayoutMixin:
 
         content = ttk.Frame(body)
         content.pack(fill="both", expand=True)
-        left_panel = RoundedPanel(content, padding=self._px(18), width=self._px(405), radius=self._px(10))
-        left = left_panel.content
+        left_panel = RoundedPanel(content, padding=self._px(18), width=self._px(480), radius=self._px(10))
         left_panel.pack(side="left", fill="y", padx=(0, self._px(12)))
         left_panel.pack_propagate(False)
-        ttk.Label(left, text=tr("音乐库"), style="Title.Card.TLabel").pack(anchor="w", pady=(0, 12))
-        ttk.Label(
-            left,
-            text=tr("选择音乐库文件夹后在此显示专辑"),
-            style="Muted.Card.TLabel",
-            justify="left",
-            wraplength=self._px(360),
-        ).pack(anchor="w")
-        ttk.Label(left, textvariable=self.library_var, style="Muted.Card.TLabel").pack(side="bottom", anchor="w", pady=(10, 0))
+        self._build_library_card(left_panel.content)
 
         right_column = ttk.Frame(content)
         right_column.pack(side="left", fill="both", expand=True)
         candidates_panel = RoundedPanel(right_column, padding=self._px(18), radius=self._px(10))
-        candidates = candidates_panel.content
         candidates_panel.pack(fill="both", expand=True, pady=(0, self._px(12)))
-        ttk.Label(candidates, text=tr("候选专辑"), style="Title.Card.TLabel").pack(anchor="w", pady=(0, 12))
-        ttk.Label(
-            candidates,
-            text=tr("这里会列出可还原为中文的候选专辑"),
-            style="Muted.Card.TLabel",
-            justify="left",
-        ).pack(anchor="w")
+        self._build_candidates_card(candidates_panel.content)
 
         compare_panel = RoundedPanel(right_column, padding=self._px(18), radius=self._px(10))
-        compare = compare_panel.content
         compare_panel.pack(fill="both", expand=True)
-        ttk.Label(compare, text=tr("标签对比"), style="Title.Card.TLabel").pack(anchor="w", pady=(0, 12))
-        ttk.Label(
-            compare,
-            text=tr("这里会对比当前标签与即将写入的中文标签"),
-            style="Muted.Card.TLabel",
-            justify="left",
-        ).pack(anchor="w")
+        self._build_compare_card(compare_panel.content)
+
+        self._build_options_bar(body)
 
         status_bar = ttk.Frame(self.root)
         status_bar.pack(side="bottom", fill="x")

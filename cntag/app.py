@@ -13,14 +13,22 @@ from tkinter import messagebox
 from . import i18n
 from .i18n import tr
 from .settings import load_settings
+from .ui.apply import ApplyMixin
+from .ui.candidates import CandidatesMixin
 from .ui.common import BACKGROUND, LATEST_RELEASE_URL, _settings_path
+from .ui.compare import CompareMixin
+from .ui.keyboard import KeyboardMixin
 from .ui.layout import LayoutMixin
+from .ui.library import LibraryMixin
+from .ui.options import OptionsMixin
 from .ui.theme import ThemeMixin
 from .ui.updates import UpdateMixin
 from .windowing import apply_native_window_style, configure_native_window
 
 
-class CNTagApp(ThemeMixin, LayoutMixin, UpdateMixin):
+class CNTagApp(ThemeMixin, LayoutMixin, OptionsMixin, LibraryMixin,
+               CandidatesMixin, CompareMixin, ApplyMixin, KeyboardMixin,
+               UpdateMixin):
     def __init__(self):
         self.ui_font = "SF Pro Text" if sys.platform == "darwin" else "Segoe UI"
         self.ui_semibold = "SF Pro Display" if sys.platform == "darwin" else "Segoe UI Semibold"
@@ -50,9 +58,16 @@ class CNTagApp(ThemeMixin, LayoutMixin, UpdateMixin):
         self._ui_queue: queue.SimpleQueue = queue.SimpleQueue()
         self.library_var = tk.StringVar(value=tr("尚未选择音乐库文件夹"))
         self.status_var = tk.StringVar(value=tr("就绪"))
+        self.library_path = ""
+        self.albums: list = []
+        self.selected_index = None
+        self.scan_cancel = None
+        self.scanning = False
+        self.applying = False
         self._configure_styles()
         self._load_icon()
         self._build_ui()
+        self._bind_shortcuts()
         self.root.protocol("WM_DELETE_WINDOW", self._close)
         self.root.after(50, self._drain_ui_queue)
         self.root.after(300, self._check_for_updates)
@@ -138,13 +153,20 @@ class CNTagApp(ThemeMixin, LayoutMixin, UpdateMixin):
             pass
 
     def _close(self) -> None:
+        if self.scanning or self.applying:
+            if not messagebox.askyesno(
+                    tr("正在运行"), tr("扫描或写入仍在进行，确定要退出吗？"),
+                    parent=self.root):
+                return
+            if self.scan_cancel is not None:
+                self.scan_cancel.set()
         self._close_update_dialog()
         self._save_settings()
         self.root.destroy()
 
     def _switch_language(self) -> None:
         target = "en" if i18n.language() == "zh" else "zh"
-        if self.updating:
+        if self.updating or self.scanning or self.applying:
             messagebox.showwarning(
                 tr("无法切换语言"), tr("请等待更新完成后再切换语言。"), parent=self.root
             )
@@ -174,6 +196,10 @@ class CNTagApp(ThemeMixin, LayoutMixin, UpdateMixin):
         settings = {
             "language": getattr(self, "language_setting", "auto"),
         }
+        try:
+            settings.update(self._persistable_options())
+        except (AttributeError, tk.TclError):
+            pass
         try:
             path = _settings_path()
             path.parent.mkdir(parents=True, exist_ok=True)

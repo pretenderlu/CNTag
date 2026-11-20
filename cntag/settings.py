@@ -8,6 +8,9 @@ from pathlib import Path
 
 
 def settings_path() -> Path:
+    override = os.environ.get("CNTAG_CONFIG_DIR")
+    if override:
+        return Path(override) / "settings.json"
     if sys.platform == "win32":
         root = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
     elif sys.platform == "darwin":

@@ -1,3 +1,4 @@
+import _isolate  # noqa: F401
 import ast
 import string
 import unittest

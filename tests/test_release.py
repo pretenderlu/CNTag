@@ -1,3 +1,4 @@
+import _isolate  # noqa: F401
 import re
 import unittest
 from pathlib import Path
