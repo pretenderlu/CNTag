@@ -21,11 +21,18 @@ CNTag 是一款 Windows 与 macOS 桌面工具，DiscTag 的姊妹项目，用�
 
 ## 下载与运行
 
-发布页提供 Windows 安装包与免安装压缩包（当前版本暂不提供 macOS 构建，Mac 用户可从源码运行）：
+发布页提供 Windows 安装包与免安装压缩包，以及 Apple Silicon、Intel Mac 的 macOS 构建：
 
 [下载 Releases](https://github.com/pretenderlu/CNTag/releases)
 
 Windows 用户可运行 `CNTagSetup-v0.1.0.exe` 完成安装，默认安装到 `%LOCALAPPDATA%\Programs\CNTag`，不需要管理员权限。安装器会创建开始菜单快捷方式，也可选择桌面快捷方式。也提供免安装 ZIP，解压后运行 `CNTag.exe` 并保留 `_internal` 目录。
+
+macOS 构建使用 ad-hoc 签名，未经过 Apple Developer ID 签名和公证，首次打开时 macOS 会提示无法验证开发者。放行方法（只需一次）：
+
+1. 将 `CNTag.app` 拖入“应用程序”文件夹，双击打开，在提示框中点“完成”。
+2. 打开“系统设置 → 隐私与安全性”，在页面下方找到 CNTag 的提示，点“仍要打开”，再输入密码确认。
+
+也可以在终端执行 `xattr -dr com.apple.quarantine /Applications/CNTag.app` 后再打开。
 
 ## 从源码运行
 

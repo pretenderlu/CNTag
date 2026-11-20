@@ -1,65 +1,25 @@
 name: Release
 
-# 仅手动触发：在 Actions 中选择已存在的 v* 标签运行，构建全部平台并创建草稿 Release。
-# 目前的发布以本地构建的 Windows 资产为准（见 AGENTS.md）；草稿不会触发应用内自动更新。
+# Windows 资产在本地构建并随 Release 上传（见 AGENTS.md）。
+# Release 发布后自动构建 macOS（Apple Silicon / Intel）DMG，上传到该 Release，并在发布说明中补上下载项。
+# 也可在 Actions 中手动运行，指定已存在的 Release 标签。
 on:
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v0.1.0"
+        required: true
 
 permissions:
   contents: read
 
 env:
   PYTHONUTF8: "1"
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
 
 jobs:
-  windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-python@v7
-        with:
-          python-version: "3.12"
-
-      - name: Check tag matches __version__
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
-        run: |
-          version=$(python -c "import re; print(re.search(r'__version__\s*=\s*\"([^\"]+)\"', open('cntag/__init__.py', encoding='utf-8').read()).group(1))")
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match __version__ $version"
-            exit 1
-          fi
-
-      - name: Install Python dependencies
-        run: python -m pip install -r requirements-dev.txt
-
-      - name: Run regression tests
-        run: python -m unittest discover -s tests -v
-
-      - name: Build CNTag
-        run: python build_app.py
-
-      - name: Create portable ZIP
-        run: python -c "import shutil; shutil.make_archive('dist/CNTag-Windows-x64', 'zip', 'dist', 'CNTag')"
-
-      - name: Install Inno Setup
-        run: choco install innosetup --no-progress -y
-
-      - name: Build installer
-        shell: pwsh
-        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\CNTag.iss'
-
-      - name: Upload Windows packages
-        uses: actions/upload-artifact@v7
-        with:
-          name: CNTag-Windows
-          path: |
-            dist/CNTag-Windows-x64.zip
-            dist/installer/CNTagSetup-*.exe
-          if-no-files-found: error
-          retention-days: 30
-
   macos:
     strategy:
       fail-fast: false
@@ -72,10 +32,20 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
 
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+
+      - name: Check tag matches __version__
+        run: |
+          version=$(python -c "import re; print(re.search(r'__version__\s*=\s*\"([^\"]+)\"', open('cntag/__init__.py', encoding='utf-8').read()).group(1))")
+          if [ "v$version" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match __version__ $version"
+            exit 1
+          fi
 
       - name: Install Python dependencies
         run: python -m pip install -r requirements-dev.txt
@@ -111,12 +81,13 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  draft-release:
-    needs: [windows, macos]
-    if: startsWith(github.ref, 'refs/tags/')
+  attach:
+    needs: macos
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Download packages
         uses: actions/download-artifact@v8
@@ -124,15 +95,32 @@ jobs:
           path: packages
           merge-multiple: true
 
-      - name: Create draft release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Upload DMGs to the release
         run: |
-          # 构件可能带子目录（如 installer/），只上传其中的文件。
-          mapfile -t files < <(find packages -type f | sort)
+          mapfile -t files < <(find packages -type f -name '*.dmg' | sort)
           printf '%s\n' "${files[@]}"
-          gh release create "$GITHUB_REF_NAME" "${files[@]}" \
-            --repo "$GITHUB_REPOSITORY" \
-            --draft \
-            --title "CNTag $GITHUB_REF_NAME" \
-            --notes "发布说明待补充。"
+          gh release upload "$TAG" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+
+      - name: Add macOS downloads to the release notes
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body > notes.md
+          python3 - <<'EOF'
+          from pathlib import Path
+
+          path = Path("notes.md")
+          lines = path.read_text(encoding="utf-8").rstrip("\n").split("\n")
+          if not any("CNTag-macOS-AppleSilicon.dmg" in line for line in lines):
+              lines = [line for line in lines if "暂不提供 macOS" not in line]
+              mac = ["- Apple Silicon Mac：`CNTag-macOS-AppleSilicon.dmg`", "- Intel Mac：`CNTag-macOS-Intel.dmg`"]
+              anchor = next((i for i, line in enumerate(lines) if "CNTag-Windows-x64.zip" in line), None)
+              if anchor is None:
+                  lines += ["", "Download / 下载：", *mac]
+              else:
+                  lines[anchor + 1:anchor + 1] = mac
+              while lines and not lines[-1].strip():
+                  lines.pop()
+              lines += ["", "macOS 构建使用 ad-hoc 签名，首次打开需在“系统设置 → 隐私与安全性”中点“仍要打开”，详见 README。"]
+          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          EOF
+          cat notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file notes.md
