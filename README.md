@@ -21,7 +21,7 @@ CNTag 是一款 Windows 与 macOS 桌面工具，DiscTag 的姊妹项目，用�
 
 ## 下载与运行
 
-发布页提供 Windows 安装包与压缩包，以及 Apple Silicon、Intel Mac 的 macOS 构建：
+发布页提供 Windows 安装包与免安装压缩包（当前版本暂不提供 macOS 构建，Mac 用户可从源码运行）：
 
 [下载 Releases](https://github.com/pretenderlu/CNTag/releases)
 

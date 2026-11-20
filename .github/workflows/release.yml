@@ -1,11 +1,8 @@
 name: Release
 
-# 推送 v* 标签后构建全部平台，并创建草稿 Release。
-# 在 GitHub 上核对资产、补写发布说明后再手动发布；草稿不会触发应用内自动更新。
+# 仅手动触发：在 Actions 中选择已存在的 v* 标签运行，构建全部平台并创建草稿 Release。
+# 目前的发布以本地构建的 Windows 资产为准（见 AGENTS.md）；草稿不会触发应用内自动更新。
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
 
 permissions:
