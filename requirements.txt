@@ -1,0 +1,5 @@
+requests>=2.31,<3
+mutagen>=1.47,<2
+Pillow>=10,<14
+zhconv>=1.4,<2
+pypinyin>=0.50,<1

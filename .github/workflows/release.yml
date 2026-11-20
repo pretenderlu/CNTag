@@ -1,0 +1,141 @@
+name: Release
+
+# 推送 v* 标签后构建全部平台，并创建草稿 Release。
+# 在 GitHub 上核对资产、补写发布说明后再手动发布；草稿不会触发应用内自动更新。
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Check tag matches __version__
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          version=$(python -c "import re; print(re.search(r'__version__\s*=\s*\"([^\"]+)\"', open('cntag/__init__.py', encoding='utf-8').read()).group(1))")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match __version__ $version"
+            exit 1
+          fi
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run regression tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build CNTag
+        run: python build_app.py
+
+      - name: Create portable ZIP
+        run: python -c "import shutil; shutil.make_archive('dist/CNTag-Windows-x64', 'zip', 'dist', 'CNTag')"
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        shell: pwsh
+        run: '& "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\CNTag.iss'
+
+      - name: Upload Windows packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: CNTag-Windows
+          path: |
+            dist/CNTag-Windows-x64.zip
+            dist/installer/CNTagSetup-*.exe
+          if-no-files-found: error
+          retention-days: 30
+
+  macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            suffix: AppleSilicon
+          - runner: macos-15-intel
+            suffix: Intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run regression tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Build CNTag.app
+        run: python build_app.py
+
+      - name: Ad-hoc sign application
+        run: |
+          codesign --deep --force --sign - dist/CNTag.app
+          codesign --verify --deep --strict --verbose=2 dist/CNTag.app
+
+      - name: Create DMG
+        # 托管 macOS runner 上 hdiutil 偶尔报 “Resource busy”（后台扫描占用文件），重试即可。
+        run: |
+          for attempt in 1 2 3; do
+            if hdiutil create -volname CNTag -srcfolder dist/CNTag.app -ov -format UDZO "dist/CNTag-macOS-${{ matrix.suffix }}.dmg"; then
+              exit 0
+            fi
+            echo "hdiutil failed (attempt $attempt), retrying..."
+            sleep $((attempt * 5))
+          done
+          exit 1
+
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v7
+        with:
+          name: CNTag-macOS-${{ matrix.suffix }}
+          path: dist/CNTag-macOS-${{ matrix.suffix }}.dmg
+          if-no-files-found: error
+          retention-days: 30
+
+  draft-release:
+    needs: [windows, macos]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          path: packages
+          merge-multiple: true
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 构件可能带子目录（如 installer/），只上传其中的文件。
+          mapfile -t files < <(find packages -type f | sort)
+          printf '%s\n' "${files[@]}"
+          gh release create "$GITHUB_REF_NAME" "${files[@]}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --title "CNTag $GITHUB_REF_NAME" \
+            --notes "发布说明待补充。"
