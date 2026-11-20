@@ -15,7 +15,7 @@ from .i18n import tr
 from .settings import load_settings
 from .ui.apply import ApplyMixin
 from .ui.candidates import CandidatesMixin
-from .ui.common import BACKGROUND, LATEST_RELEASE_URL, _settings_path
+from .ui.common import BACKGROUND, LATEST_RELEASE_URL, _resource_path, _settings_path
 from .ui.compare import CompareMixin
 from .ui.keyboard import KeyboardMixin
 from .ui.layout import LayoutMixin
@@ -34,6 +34,14 @@ class CNTagApp(ThemeMixin, LayoutMixin, OptionsMixin, LibraryMixin,
         self.ui_semibold = "SF Pro Display" if sys.platform == "darwin" else "Segoe UI Semibold"
         self.cjk_font = "PingFang SC" if sys.platform == "darwin" else "Microsoft YaHei UI"
         self._enable_dpi_awareness()
+        if sys.platform == "win32":
+            try:
+                import ctypes
+
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                    "pretenderlu.CNTag")
+            except (AttributeError, OSError):
+                pass
         self.root = tk.Tk()
         try:
             self.root.attributes("-alpha", 0.0)
@@ -65,6 +73,15 @@ class CNTagApp(ThemeMixin, LayoutMixin, OptionsMixin, LibraryMixin,
         self.scanning = False
         self.applying = False
         self._configure_styles()
+        # iconbitmap must precede iconphoto on Windows: setting iconphoto first
+        # and iconbitmap afterwards leaves the title-bar small icon blank.
+        if sys.platform == "win32":
+            try:
+                ico = _resource_path("assets/icon.ico")
+                if ico.is_file():
+                    self.root.iconbitmap(default=str(ico))
+            except tk.TclError:
+                pass
         self._load_icon()
         self._build_ui()
         self._bind_shortcuts()

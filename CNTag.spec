@@ -14,7 +14,7 @@ a = Analysis(
     binaries=[],
     datas=[
         *(
-            (str(asset), f"assets/{asset.name}")
+            (str(asset), "assets")
             for asset in (project / "assets").iterdir()
             if sys.platform == "darwin" or asset.name != "icon.icns"
         ),

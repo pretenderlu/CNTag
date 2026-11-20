@@ -24,7 +24,7 @@ class CompareMixin:
         ttk.Label(parent, text=tr("标签对比"), style="Title.Card.TLabel").pack(
             anchor="w", pady=(0, self._px(8)))
 
-        buttons = ttk.Frame(parent)
+        buttons = ttk.Frame(parent, style="Card.TFrame")
         buttons.pack(fill="x", pady=(0, self._px(8)))
         ttk.Button(buttons, text=tr("全选"), command=lambda: self._set_all(True)).pack(
             side="left", padx=(0, self._px(6)))
@@ -36,7 +36,7 @@ class CompareMixin:
         self.confirm_hint = ttk.Label(parent, style="Muted.Card.TLabel",
                                       text=tr("自动匹配不可靠，请在上方确认专辑后再应用"))
 
-        tree_frame = ttk.Frame(parent)
+        tree_frame = ttk.Frame(parent, style="Card.TFrame")
         tree_frame.pack(fill="both", expand=True)
         columns = ("apply", "file", "title", "artist", "album",
                    "track", "confidence", "method")

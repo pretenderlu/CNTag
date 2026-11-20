@@ -41,16 +41,18 @@ class LibraryMixin:
                   wraplength=self._px(330), justify="left").pack(
             anchor="w", pady=(self._px(6), self._px(10)))
 
-        scan_row = ttk.Frame(parent)
+        scan_row = ttk.Frame(parent, style="Card.TFrame")
         scan_row.pack(fill="x")
         self.scan_button = ttk.Button(scan_row, text=tr("开始扫描"),
                                       style="Accent.TButton", command=self._toggle_scan)
         self.scan_button.pack(side="left")
+        # Progress widgets stay hidden while idle (created un-packed, so the
+        # card doesn't jump when they appear); the count label remains after
+        # a scan finishes to show the final "n / m" total.
         self.progress = ttk.Progressbar(scan_row, mode="determinate", length=self._px(120))
-        self.progress.pack(side="left", padx=(self._px(10), self._px(6)), fill="x", expand=True)
         self.album_count_var = tk.StringVar(value="")
-        ttk.Label(scan_row, textvariable=self.album_count_var,
-                  style="Muted.Card.TLabel").pack(side="left")
+        self.album_count_label = ttk.Label(scan_row, textvariable=self.album_count_var,
+                                           style="Muted.Card.TLabel")
 
         self.filter_var = tk.StringVar(value=filter_names()[0])
         self.filter_combo = ttk.Combobox(parent, textvariable=self.filter_var,
@@ -58,7 +60,7 @@ class LibraryMixin:
         self.filter_combo.pack(fill="x", pady=(self._px(10), self._px(6)))
         self.filter_combo.bind("<<ComboboxSelected>>", lambda _e: self._refilter_albums())
 
-        tree_frame = ttk.Frame(parent)
+        tree_frame = ttk.Frame(parent, style="Card.TFrame")
         tree_frame.pack(fill="both", expand=True)
         columns = ("status", "folder", "files", "match")
         self.album_tree = ttk.Treeview(tree_frame, columns=columns, show="headings",
@@ -118,7 +120,10 @@ class LibraryMixin:
         self.selected_index = None
         self.album_tree.delete(*self.album_tree.get_children())
         self.progress.configure(value=0, maximum=1)
+        self.progress.pack(side="left", padx=(self._px(10), self._px(6)),
+                           fill="x", expand=True)
         self.album_count_var.set("")
+        self.album_count_label.pack(side="left")
         self.scan_button.configure(text=tr("取消扫描"))
         self._set_options_state()
         self._set_apply_state()
@@ -161,6 +166,7 @@ class LibraryMixin:
 
     def _finish_scan(self) -> None:
         self.scanning = False
+        self.progress.pack_forget()
         self.scan_button.configure(text=tr("开始扫描"))
         self._set_options_state()
         self._set_apply_state()

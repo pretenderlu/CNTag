@@ -30,7 +30,7 @@ class ThemeMixin:
         style.configure("Match.Card.TLabel", background=CARD, foreground=MUTED, font=(self.ui_font, 10))
         style.configure(
             "TEntry",
-            fieldbackground="#F8F9FC",
+            fieldbackground=CARD,
             foreground=INK,
             bordercolor="#DCE0EB",
             lightcolor="#DCE0EB",
@@ -40,7 +40,7 @@ class ThemeMixin:
         style.map("TEntry", bordercolor=[("focus", ACCENT)], fieldbackground=[("focus", CARD)])
         style.configure(
             "TCombobox",
-            fieldbackground="#F8F9FC",
+            fieldbackground=CARD,
             foreground=INK,
             background="#F8F9FC",
             bordercolor="#DCE0EB",
@@ -54,11 +54,28 @@ class ThemeMixin:
         style.map(
             "TCombobox",
             bordercolor=[("focus", ACCENT)],
-            fieldbackground=[("readonly", "#F8F9FC")],
-            background=[("readonly", "#F8F9FC"), ("active", "#EEF0F6")],
+            fieldbackground=[("readonly", CARD)],
+            background=[("readonly", CARD), ("active", "#EEF0F6")],
             arrowcolor=[("readonly", ACCENT), ("active", ACCENT_DARK)],
-            selectbackground=[("readonly", "#F8F9FC")],
+            selectbackground=[("readonly", CARD)],
             selectforeground=[("readonly", INK)],
+        )
+        style.configure(
+            "TSpinbox",
+            fieldbackground=CARD,
+            foreground=INK,
+            bordercolor="#DCE0EB",
+            lightcolor="#DCE0EB",
+            darkcolor="#DCE0EB",
+            arrowcolor=ACCENT,
+            arrowsize=self._px(13),
+            relief="flat",
+            padding=(self._px(10), self._px(11)),
+        )
+        style.map(
+            "TSpinbox",
+            bordercolor=[("focus", ACCENT)],
+            fieldbackground=[("focus", CARD)],
         )
         self.root.option_add("*TCombobox*Listbox.background", CARD)
         self.root.option_add("*TCombobox*Listbox.foreground", INK)

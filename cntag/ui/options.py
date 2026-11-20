@@ -8,11 +8,11 @@ from ..i18n import tr
 from ..models import ScanOptions, normalize_sources
 from .common import CARD
 
-COUNTRIES = ("tw", "cn", "hk", "jp", "us")
+COUNTRIES = ("cn", "tw", "hk", "jp", "us")
 
 
 def country_names() -> list[str]:
-    return [tr("台湾"), tr("中国大陆"), tr("香港"), tr("日本"), tr("美国")]
+    return [tr("中国大陆"), tr("中国台湾"), tr("中国香港"), tr("日本"), tr("美国")]
 
 
 def _float(value, default: float) -> float:

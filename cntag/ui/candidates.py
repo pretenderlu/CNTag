@@ -25,7 +25,7 @@ class CandidatesMixin:
         ttk.Label(parent, text=tr("候选专辑"), style="Title.Card.TLabel").pack(
             anchor="w", pady=(0, self._px(8)))
 
-        search_row = ttk.Frame(parent)
+        search_row = ttk.Frame(parent, style="Card.TFrame")
         search_row.pack(fill="x", pady=(0, self._px(8)))
         self.search_album_var = tk.StringVar()
         self.search_artist_var = tk.StringVar()
@@ -39,12 +39,12 @@ class CandidatesMixin:
                                         command=self._manual_search)
         self.search_button.pack(side="left")
 
-        body = ttk.Frame(parent)
+        body = ttk.Frame(parent, style="Card.TFrame")
         body.pack(fill="both", expand=True)
 
         # Pack the right-hand side panel first so it always keeps its
         # requested width; the tree takes whatever remains.
-        side = ttk.Frame(body, width=self._px(COVER_SIZE))
+        side = ttk.Frame(body, style="Card.TFrame", width=self._px(COVER_SIZE))
         side.pack(side="right", fill="y", padx=(self._px(12), 0))
         side.pack_propagate(False)
         self.cover_label = tk.Label(side, bg=CARD, highlightthickness=1,

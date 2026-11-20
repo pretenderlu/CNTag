@@ -32,7 +32,7 @@ def apply_rounded_styles(root, style, scale: float) -> list[ImageTk.PhotoImage]:
     accent_active = rounded_image("#5140C8", "#5140C8")
     accent_pressed = rounded_image("#4535B4", "#4535B4")
     accent_disabled = rounded_image("#C8C3EA", "#C8C3EA")
-    field = rounded_image("#F8F9FC", "#DCE0EB")
+    field = rounded_image("#FFFFFF", "#DCE0EB")
     field_focus = rounded_image("#FFFFFF", "#6857E5")
     field_disabled = rounded_image("#F5F6F9", "#E3E6EF")
 
@@ -60,7 +60,7 @@ def apply_rounded_styles(root, style, scale: float) -> list[ImageTk.PhotoImage]:
         width=minimum,
         height=minimum,
     )
-    for element_name in ("CNTag.Entry.field", "CNTag.Combobox.field"):
+    for element_name in ("CNTag.Entry.field", "CNTag.Combobox.field", "CNTag.Spinbox.field"):
         style.element_create(
             element_name,
             "image",
@@ -122,6 +122,34 @@ def apply_rounded_styles(root, style, scale: float) -> list[ImageTk.PhotoImage]:
                             "Combobox.padding",
                             {"sticky": "nswe", "children": [("Combobox.textarea", {"sticky": "nswe"})]},
                         )
+                    ],
+                },
+            )
+        ],
+    )
+    style.layout(
+        "TSpinbox",
+        [
+            (
+                "CNTag.Spinbox.field",
+                {
+                    "sticky": "nswe",
+                    "children": [
+                        (
+                            "null",
+                            {
+                                "side": "right",
+                                "sticky": "",
+                                "children": [
+                                    ("Spinbox.uparrow", {"side": "top", "sticky": "e"}),
+                                    ("Spinbox.downarrow", {"side": "bottom", "sticky": "e"}),
+                                ],
+                            },
+                        ),
+                        (
+                            "Spinbox.padding",
+                            {"sticky": "nswe", "children": [("Spinbox.textarea", {"sticky": "nswe"})]},
+                        ),
                     ],
                 },
             )

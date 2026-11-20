@@ -6,3 +6,4 @@ dist/
 .build_tools/
 vendor/
 .DS_Store
+.venv*/
