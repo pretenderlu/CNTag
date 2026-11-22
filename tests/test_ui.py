@@ -103,6 +103,27 @@ class UITests(unittest.TestCase):
         self.assertEqual(int(self.app.progress["value"]), 1)
         self.assertIn("1 / 1", self.app.album_count_var.get())
 
+    def test_scan_updates_apply_count(self):
+        result = make_result("matched", rows=[make_row(), make_row(file="lib/album1/b.wav")])
+        self.app.albums = [make_result("matched", rows=[make_row()])]
+        self.app._update_apply_count()
+        self.assertIn("1", self.app.apply_var.get())
+        with tempfile.TemporaryDirectory() as tmp,              patch("cntag.ui.library.group_albums", return_value=[make_group()]),              patch("cntag.ui.library.scan_album", return_value=result):
+            self.app.library_path = tmp
+            self.app._start_scan()
+            self.assertIn("0", self.app.apply_var.get())
+            deadline = time.time() + 5
+            while self.app.scanning and time.time() < deadline:
+                self.pump(3)
+            self.pump(5)
+        self.assertIn("2", self.app.apply_var.get())
+
+    def test_album_in_library_root_shows_folder_name(self):
+        self.app.albums = [make_result("matched")]
+        self.app.library_path = "lib/album1"
+        self.app._refilter_albums()
+        self.assertEqual(self.app.album_tree.item("0", "values")[1], "album1")
+
     def test_filter_combobox(self):
         self.app.albums = [
             make_result("matched"), make_result("needs_confirm"),
@@ -135,6 +156,16 @@ class UITests(unittest.TestCase):
         self.assertIn("七里香", values[0])
         self.assertEqual(values[2], "10 / 2")
         self.assertEqual(len(self.app.compare_tree.get_children()), 1)
+
+    def test_selecting_failed_album_shows_full_error(self):
+        result = make_result("error")
+        result.error = "[Errno 2] No such file or directory: 'zhcdict.json'"
+        self.app.albums = [result]
+        self.app.library_path = "lib"
+        self.app._refilter_albums()
+        self.app.album_tree.selection_set("0")
+        self.app._on_album_select(None)
+        self.assertIn(result.error, self.app.status_var.get())
 
     # -------------------------------------------------------------- compare
 

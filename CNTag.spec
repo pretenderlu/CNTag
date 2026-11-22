@@ -2,6 +2,8 @@ import re
 import sys
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_data_files
+
 
 project = Path(SPECPATH)
 version = re.search(r'__version__\s*=\s*"([^"]+)"', (project / "cntag" / "__init__.py").read_text(encoding="utf-8")).group(1)
@@ -21,6 +23,7 @@ a = Analysis(
         (str(project / "LICENSE"), "."),
         (str(project / "THIRD_PARTY_NOTICES.md"), "."),
         (str(project / "licenses"), "licenses"),
+        *collect_data_files("zhconv"),
     ],
     hiddenimports=[],
     hookspath=[],

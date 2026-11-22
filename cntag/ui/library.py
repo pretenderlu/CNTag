@@ -126,7 +126,7 @@ class LibraryMixin:
         self.album_count_label.pack(side="left")
         self.scan_button.configure(text=tr("取消扫描"))
         self._set_options_state()
-        self._set_apply_state()
+        self._update_apply_count()
 
         root = Path(self.library_path)
         opts = self.scan_options()
@@ -163,6 +163,7 @@ class LibraryMixin:
         self.progress.configure(value=done)
         total = int(self.progress["maximum"])
         self.album_count_var.set(tr("{0} / {1} 张专辑", done, total))
+        self._update_apply_count()
 
     def _finish_scan(self) -> None:
         self.scanning = False
@@ -196,6 +197,8 @@ class LibraryMixin:
             folder = os.path.relpath(result.group.folder, self.library_path)
         except (ValueError, TypeError):
             folder = str(result.group.folder)
+        if folder == ".":
+            folder = Path(self.library_path).name or str(result.group.folder)
         match = ""
         if result.chosen is not None:
             match = f"{result.chosen.artist} / {result.chosen.name}"
@@ -229,5 +232,7 @@ class LibraryMixin:
         match = ""
         if result.chosen is not None:
             match = f" · {result.chosen.artist} / {result.chosen.name}"
+        elif result.status == "error" and result.error:
+            match = " · " + tr("扫描出错：{0}", result.error)
         self.status_var.set(f"{result.group.folder}{match}")
         self._show_album(result)

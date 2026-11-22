@@ -7,6 +7,7 @@ CNTag 是 DiscTag 的姊妹应用，用于把现有中文音乐库中被音译�
 - `ruff check .`（规则见 `ruff.toml`，只检查真实错误）。
 - 每个测试文件开头 `import _isolate`：把 `CNTAG_CONFIG_DIR` 指向临时目录，避免测试写入真实的设置、撤销记录和缓存。测试不得访问网络。
 - `scripts/make_icon.py` 用 Pillow 生成 `assets/icon.png/.ico/.icns`。
+- 打包自检：`python build_app.py` 构建后会运行 `<应用> --self-test`（`cntag/selftest.py`，离线、只用临时目录），任何一项失败构建即失败；从源码可用 `python main.py --self-test` 运行。打包后的程序与源码的差别主要在随包数据文件（图标、zhconv 字典、pypinyin 数据、CA 证书），缺失时程序能启动、扫描时才报错，单元测试发现不了。新增在运行时才读取数据文件的依赖时，在 `CNTag.spec` 的 `datas` 中收集（如 `collect_data_files("zhconv")`），并在 `selftest.py` 里加一项检查。
 
 ## 代码结构
 - 无界面逻辑：`textutil`（CJK / 拼音 / 简繁 / `name_match_score` / `artists_match`）、`tags`（读写标签与重命名，WAV 用 ID3 帧）、`library`（遍历与按专辑分组，含多碟合并）、`resolve`（名称解析与候选）、`matching`（文件对应曲目、生成行）、`scanner`（`scan_album` / `rows_for_candidate` / `scan_library`，含弱匹配降级为待确认）、`history`（应用与可重试撤销，每个文件写入后原子更新日志）、`models`。
@@ -22,7 +23,7 @@ CNTag 是 DiscTag 的姊妹应用，用于把现有中文音乐库中被音译�
 
 ## 发布流程（本地构建 Windows）
 1. 修改 `__version__` 和 README，跑通测试与 ruff，提交并推送 main，等待 `Tests` 工作流通过。
-2. 本地构建统一用 Python 3.12（与 CI 一致，Tk 8.6）：`py -3.12 -m venv .venv312`，`.venv312\Scripts\python -m pip install -r requirements-dev.txt`，`.venv312\Scripts\python build_app.py`（输出 `dist/CNTag`），在 `dist` 下打包 `CNTag-Windows-x64.zip`（顶层为 `CNTag/`），`"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" installer\CNTag.iss` 生成 `dist/installer/CNTagSetup-v<版本>.exe`。静默安装到临时目录启动验证后卸载。
+2. 本地构建统一用 Python 3.12（与 CI 一致，Tk 8.6）：`py -3.12 -m venv .venv312`，`.venv312\Scripts\python -m pip install -r requirements-dev.txt`，`.venv312\Scripts\python build_app.py`（输出 `dist/CNTag`），在 `dist` 下打包 `CNTag-Windows-x64.zip`（顶层为 `CNTag/`），`"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" installer\CNTag.iss` 生成 `dist/installer/CNTagSetup-v<版本>.exe`。本机已安装 CNTag 时不要运行安装包做验证（同一 AppId 会覆盖或卸载现有安装），直接验证 `dist/CNTag/CNTag.exe`。
 3. 推送附注 tag `v<版本>`（tag 信息为 `CNTag v<版本>`），`gh release create v<版本> --draft` 上传以上 2 个 Windows 资产，按以往格式填写发布说明（只写 Windows 下载项即可）；核对后发布。草稿和预发布不会触发应用内更新。
 4. 发布后 `Release` 工作流（`on: release: published`）自动在 macOS（Apple Silicon / Intel）上构建、ad-hoc 签名并生成 `CNTag-macOS-AppleSilicon.dmg` / `CNTag-macOS-Intel.dmg`，上传到该 Release，并在发布说明的下载列表中补上两项和签名提示。失败时可在 Actions 中手动运行 `Release`，输入标签重跑。
 5. 自动更新要求 Release 资产带有 GitHub 的 `sha256` digest（上传后自动生成），发布后用 `check_for_updates("<旧版本>")` 验证。

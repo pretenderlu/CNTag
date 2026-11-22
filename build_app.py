@@ -11,6 +11,15 @@ if __name__ == "__main__":
         check=True,
     )
     if sys.platform == "darwin":
-        print(f"Application: {project / 'dist' / 'CNTag.app'}")
+        application = project / "dist" / "CNTag.app"
+        executable = application / "Contents" / "MacOS" / "CNTag"
     else:
-        print(f"Application: {project / 'dist' / 'CNTag' / 'CNTag.exe'}")
+        application = executable = project / "dist" / "CNTag" / "CNTag.exe"
+    report = project / "build" / "self-test.txt"
+    report.unlink(missing_ok=True)
+    result = subprocess.run([str(executable), "--self-test", str(report)], cwd=project)
+    sys.stdout.reconfigure(errors="backslashreplace")
+    print(report.read_text(encoding="utf-8") if report.is_file() else "The built application wrote no self-test report.")
+    if result.returncode or not report.is_file():
+        raise SystemExit("Self-test of the built application failed.")
+    print(f"Application: {application}")
